@@ -1,0 +1,46 @@
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
+  db:
+    image: postgres:13
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  backend:
+    image: ${DOCKERHUB_USERNAME}/kittygram_backend:latest
+    env_file: .env
+    command: >-
+      sh -c "python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn kittygram_backend.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - static:/static
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/kittygram_frontend:latest
+    command: cp -r /app/build/. /static/
+    volumes:
+      - static:/static
+  gateway:
+    image: ${DOCKERHUB_USERNAME}/kittygram_gateway:latest
+    ports:
+      - "9000:80"
+    volumes:
+      - static:/static:ro
+      - media:/media:ro
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_completed_successfully

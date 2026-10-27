@@ -1,0 +1,4 @@
+repo_owner: Hatsuka4
+kittygram_domain: http://localhost:9000
+taski_domain: http://localhost:8000
+dockerhub_username: your_dockerhub_username
